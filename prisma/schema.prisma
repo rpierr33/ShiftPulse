@@ -1,0 +1,540 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────
+
+enum UserRole {
+  WORKER
+  COMPANY
+  ADMIN
+}
+
+enum MembershipStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum ShiftStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TimeEntryStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FLAGGED
+}
+
+enum ClockEventType {
+  CLOCK_IN
+  CLOCK_OUT
+}
+
+enum AuditAction {
+  CLOCK_IN
+  CLOCK_OUT
+  TIME_ENTRY_CREATED
+  TIME_ENTRY_EDITED
+  TIME_ENTRY_APPROVED
+  TIME_ENTRY_REJECTED
+  TIME_ENTRY_DELETED
+  SHIFT_CREATED
+  SHIFT_UPDATED
+  SHIFT_CANCELLED
+  SCHEDULE_CREATED
+  SCHEDULE_UPDATED
+  ASSIGNMENT_CREATED
+  ASSIGNMENT_CANCELLED
+  MEMBERSHIP_APPROVED
+  MEMBERSHIP_REJECTED
+  MEMBERSHIP_SUSPENDED
+  SETTINGS_CHANGED
+  USER_CREATED
+  USER_UPDATED
+  MANUAL_EDIT
+  EVV_FLAG
+  EXPORT_GENERATED
+}
+
+enum PostingStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  CANCELLED
+}
+
+enum AssignmentStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+// ─── Models ──────────────────────────────────────────────────────
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  name           String
+  passwordHash   String
+  role           UserRole
+  phone          String?
+  avatarUrl      String?
+  timezone       String    @default("America/New_York")
+  emailVerified  DateTime?
+  isActive       Boolean   @default(true)
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  workerProfile  WorkerProfile?
+  companyProfile CompanyProfile?
+  memberships    CompanyMembership[]
+  clockEvents    ClockEvent[]
+  timeEntries    TimeEntry[]
+  auditLogs      AuditLog[]        @relation("AuditActor")
+  notifications  Notification[]
+  sessions       Session[]
+  accounts       Account[]
+  exports        PayrollExport[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model WorkerProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  licenseNumber   String?
+  licenseState    String?
+  licenseExpiry   DateTime?
+  specialties     String[] @default([])
+  certifications  String[] @default([])
+  bio             String?
+  hourlyRate      Float?
+  isAvailable     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments      Assignment[]
+  availabilitySlots AvailabilitySlot[]
+
+  @@map("worker_profiles")
+}
+
+model AvailabilitySlot {
+  id              String    @id @default(cuid())
+  workerProfileId String
+  dayOfWeek       DayOfWeek
+  startTime       String    // "06:00" format
+  endTime         String    // "18:00" format
+  isRecurring     Boolean   @default(true)
+  specificDate    DateTime? // for one-off overrides
+  isUnavailable   Boolean   @default(false) // true = blocked out
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+
+  @@index([workerProfileId, dayOfWeek])
+  @@map("availability_slots")
+}
+
+model CompanyProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  companyName String
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  phone       String?
+  website     String?
+  npiNumber   String?
+  taxId       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("company_profiles")
+}
+
+model Company {
+  id                    String   @id @default(cuid())
+  name                  String
+  slug                  String   @unique
+  joinCode              String   @unique
+  autoApproveWorkers    Boolean  @default(false)
+  allowManualEntry      Boolean  @default(false)
+  allowBackdatedEntry   Boolean  @default(false)
+  requireShiftSelection Boolean  @default(false)
+  enableGeofencing      Boolean  @default(false)
+  geofenceRadiusMeters  Int      @default(200)
+  timezone              String   @default("America/New_York")
+  address               String?
+  city                  String?
+  state                 String?
+  zipCode               String?
+  phone                 String?
+  latitude              Float?
+  longitude             Float?
+  isActive              Boolean  @default(true)
+  deletedAt             DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  memberships    CompanyMembership[]
+  shifts         Shift[]
+  schedules      Schedule[]
+  postings       Posting[]
+  shiftTemplates ShiftTemplate[]
+  timeEntries    TimeEntry[]
+  clockEvents    ClockEvent[]
+  auditLogs      AuditLog[]
+  settings       Settings?
+  exports        PayrollExport[]
+
+  @@map("companies")
+}
+
+model CompanyMembership {
+  id        String           @id @default(cuid())
+  userId    String
+  companyId String
+  status    MembershipStatus @default(PENDING)
+  role      String           @default("worker") // worker, manager, admin
+  joinedAt  DateTime?
+  deletedAt DateTime?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@map("company_memberships")
+}
+
+model ShiftTemplate {
+  id          String    @id @default(cuid())
+  companyId   String
+  title       String
+  description String?
+  location    String?
+  latitude    Float?
+  longitude   Float?
+  startTime   String    // "07:00" format
+  endTime     String    // "15:00" format
+  capacity    Int       @default(1)
+  daysOfWeek  DayOfWeek[]
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("shift_templates")
+}
+
+model Shift {
+  id          String      @id @default(cuid())
+  companyId   String
+  title       String
+  description String?
+  location    String?
+  latitude    Float?
+  longitude   Float?
+  date        DateTime
+  startTime   DateTime
+  endTime     DateTime
+  status      ShiftStatus @default(OPEN)
+  capacity    Int         @default(1)
+  deletedAt   DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignments Assignment[]
+  timeEntries TimeEntry[]
+  clockEvents ClockEvent[]
+
+  @@map("shifts")
+}
+
+model Schedule {
+  id          String    @id @default(cuid())
+  companyId   String
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  isPublished Boolean   @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignments Assignment[]
+
+  @@map("schedules")
+}
+
+model Posting {
+  id            String        @id @default(cuid())
+  companyId     String
+  title         String
+  description   String?
+  requirements  String?
+  location      String?
+  hourlyRate    Float?
+  shiftDate     DateTime?
+  startTime     DateTime?
+  endTime       DateTime?
+  status        PostingStatus @default(DRAFT)
+  deletedAt     DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignments Assignment[]
+
+  @@map("postings")
+}
+
+model Assignment {
+  id              String           @id @default(cuid())
+  workerProfileId String
+  shiftId         String?
+  scheduleId      String?
+  postingId       String?
+  status          AssignmentStatus @default(PENDING)
+  notes           String?
+  confirmedAt     DateTime?
+  deletedAt       DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  shift         Shift?        @relation(fields: [shiftId], references: [id])
+  schedule      Schedule?     @relation(fields: [scheduleId], references: [id])
+  posting       Posting?      @relation(fields: [postingId], references: [id])
+  timeEntries   TimeEntry[]
+
+  @@map("assignments")
+}
+
+model TimeEntry {
+  id              String          @id @default(cuid())
+  userId          String
+  companyId       String
+  shiftId         String?
+  assignmentId    String?
+  clockInTime     DateTime
+  clockOutTime    DateTime?
+  clockInNote     String?
+  clockOutNote    String?
+  duration        Float?          // in minutes
+  isManualEntry   Boolean         @default(false)
+  status          TimeEntryStatus @default(PENDING)
+  approvedBy      String?
+  approvedAt      DateTime?
+  rejectionReason String?
+  originalValues  Json?           // stores pre-edit values
+  evvStatus       String?         // "verified", "flagged", "out_of_range"
+  clockInLat      Float?
+  clockInLng      Float?
+  clockOutLat     Float?
+  clockOutLng     Float?
+  distanceFromSite Float?         // meters from shift location
+  deletedAt       DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  shift      Shift?      @relation(fields: [shiftId], references: [id])
+  assignment Assignment? @relation(fields: [assignmentId], references: [id])
+
+  @@map("time_entries")
+}
+
+model ClockEvent {
+  id            String         @id @default(cuid())
+  userId        String
+  companyId     String
+  shiftId       String?
+  type          ClockEventType
+  timestamp     DateTime
+  serverTime    DateTime       @default(now())
+  isManual      Boolean        @default(false)
+  latitude      Float?
+  longitude     Float?
+  accuracy      Float?         // GPS accuracy in meters
+  notes         String?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime       @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  shift   Shift?   @relation(fields: [shiftId], references: [id])
+
+  @@map("clock_events")
+}
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  actorId     String
+  companyId   String?
+  action      AuditAction
+  entityType  String
+  entityId    String
+  before      Json?
+  after       Json?
+  metadata    Json?
+  ipAddress   String?
+  createdAt   DateTime    @default(now())
+
+  actor   User     @relation("AuditActor", fields: [actorId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id])
+
+  @@index([actorId])
+  @@index([companyId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   // shift_reminder, approval_request, membership_update, etc.
+  isRead    Boolean  @default(false)
+  link      String?
+  sentVia   String[] @default(["in_app"]) // "in_app", "email", "push"
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model Settings {
+  id                     String  @id @default(cuid())
+  companyId              String  @unique
+  overtimeThreshold      Float   @default(40) // hours per week
+  overtimeMultiplier     Float   @default(1.5)
+  roundingIncrement      Int     @default(15) // minutes
+  autoApproveTimeEntries Boolean @default(false)
+  requireClockInPhoto    Boolean @default(false)
+  maxClockInEarlyMinutes Int     @default(15)
+  maxClockOutLateMinutes Int     @default(15)
+  breakDurationMinutes   Int     @default(30)
+  autoDeductBreak        Boolean @default(false)
+  enableEmailNotifications Boolean @default(true)
+  enableEvv              Boolean @default(false)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("settings")
+}
+
+model PayrollExport {
+  id          String   @id @default(cuid())
+  companyId   String
+  generatedBy String
+  format      String   // "csv", "pdf"
+  startDate   DateTime
+  endDate     DateTime
+  totalHours  Float
+  totalEntries Int
+  fileName    String
+  data        String   @db.Text // CSV content or metadata
+  createdAt   DateTime @default(now())
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  generator User    @relation(fields: [generatedBy], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt])
+  @@map("payroll_exports")
+}
+
+model RateLimitEntry {
+  id         String   @id @default(cuid())
+  key        String   // "login:ip:1.2.3.4" or "login:email:foo@bar.com"
+  attempts   Int      @default(1)
+  lastAttempt DateTime @default(now())
+  expiresAt  DateTime
+
+  @@unique([key])
+  @@index([expiresAt])
+  @@map("rate_limit_entries")
+}
