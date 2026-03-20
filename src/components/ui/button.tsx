@@ -5,24 +5,24 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
   {
     variants: {
       variant: {
-        default: "bg-blue-600 text-white hover:bg-blue-700 shadow-sm",
-        destructive: "bg-red-600 text-white hover:bg-red-700 shadow-sm",
-        outline: "border border-gray-300 bg-white hover:bg-gray-50 text-gray-700",
+        default: "bg-blue-600 text-white hover:bg-blue-500 shadow-sm shadow-blue-600/20",
+        destructive: "bg-red-600 text-white hover:bg-red-500 shadow-sm shadow-red-600/20",
+        outline: "border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-sm",
         secondary: "bg-gray-100 text-gray-900 hover:bg-gray-200",
         ghost: "hover:bg-gray-100 text-gray-700",
         link: "text-blue-600 underline-offset-4 hover:underline",
-        success: "bg-green-600 text-white hover:bg-green-700 shadow-sm",
-        warning: "bg-amber-500 text-white hover:bg-amber-600 shadow-sm",
+        success: "bg-emerald-600 text-white hover:bg-emerald-500 shadow-sm shadow-emerald-600/20",
+        warning: "bg-amber-500 text-white hover:bg-amber-400 shadow-sm shadow-amber-500/20",
       },
       size: {
         default: "h-10 px-4 py-2",
         sm: "h-8 px-3 text-xs",
         lg: "h-12 px-6 text-base",
-        xl: "h-16 px-8 text-lg",
+        xl: "h-14 px-8 text-lg",
         icon: "h-10 w-10",
       },
     },
@@ -50,7 +50,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {loading && (
           <svg
-            className="animate-spin -ml-1 mr-2 h-4 w-4"
+            className="animate-spin -ml-1 mr-1 h-4 w-4"
             fill="none"
             viewBox="0 0 24 24"
           >

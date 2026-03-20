@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth-utils";
 import { generatePayrollCSV } from "@/lib/payroll";
 import { formatDate } from "@/lib/utils";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 async function verifyCompanyAdmin(companyId: string) {
   const user = await getSessionUser();
@@ -29,6 +30,12 @@ export async function generateExport(
 ) {
   const user = await verifyCompanyAdmin(companyId);
 
+  // Rate limit: 10 attempts per 15 minutes per user
+  const rateCheck = await checkRateLimit(`export:${user.id}`);
+  if (!rateCheck.allowed) {
+    return { error: `Too many export attempts. Try again in ${Math.ceil((rateCheck.retryAfter || 60) / 60)} minutes.` };
+  }
+
   const start = new Date(startDate);
   start.setHours(0, 0, 0, 0);
   const end = new Date(endDate);
@@ -41,7 +48,7 @@ export async function generateExport(
       deletedAt: null,
     },
     include: {
-      user: { select: { name: true, email: true } },
+      user: { select: { name: true, email: true, workerProfile: { select: { hourlyRate: true } } } },
       shift: { select: { title: true } },
     },
     orderBy: [{ userId: "asc" }, { clockInTime: "asc" }],

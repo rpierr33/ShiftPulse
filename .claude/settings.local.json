@@ -1,0 +1,47 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm)",
+      "Bash(npx create-next-app@latest nurse-workforce-temp --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm)",
+      "Read(//private/tmp/**)",
+      "Bash(npx create-next-app@latest nurse-workforce-temp --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)",
+      "Bash(npx create-next-app@latest nurse-wfp --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)",
+      "Bash(cp:*)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma:*)",
+      "Bash(npx next:*)",
+      "Bash(npx --package=next@15 next build)",
+      "Bash(npm run:*)",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(curl -s http://localhost:3000/_next/static/css/app/layout.css)",
+      "Bash(ls /Users/ralphpierre/Desktop/kalocode/2026-projects/nurse-workforce-platform/tailwind.config.*)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(pkill -f \"next-server\")",
+      "Bash(npx tailwindcss:*)",
+      "Bash(node -e \"const tw = require\\(''tailwindcss''\\); console.log\\(tw.version || Object.keys\\(tw\\)\\)\")",
+      "Bash(node -e \"const p = require\\(''@tailwindcss/postcss''\\); console.log\\(typeof p\\)\")",
+      "Bash(curl:*)",
+      "Bash(gh auth:*)",
+      "Bash(grep:*)",
+      "Bash(git status:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(brew install:*)",
+      "Bash(git remote:*)",
+      "Bash(git push:*)",
+      "Bash(lsof -ti:3000,3001,3002,5432,8080,8000)",
+      "Bash(xargs kill:*)",
+      "Bash(uipro --help)",
+      "Bash(uipro init:*)",
+      "mcp__magic__21st_magic_component_refiner",
+      "Bash(lsof -ti:3000)",
+      "Bash(npm test:*)",
+      "Bash(node -e \"const p = require\\(''/Users/ralphpierre/Desktop/kalocode/2026-projects/nurse-workforce-platform/node_modules/@testing-library/jest-dom/package.json''\\); console.log\\(p.version\\)\")",
+      "Bash(npx jest:*)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ],
+  "enableAllProjectMcpServers": true
+}

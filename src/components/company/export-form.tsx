@@ -69,7 +69,7 @@ export function ExportForm({ companyId }: { companyId: string }) {
         const result = await generateExport(companyId, startDate, endDate, format);
         setMessage({
           type: "success",
-          text: `Export generated: ${result.totalEntries} entries, ${result.totalHours.toFixed(1)} hours.`,
+          text: `Export generated: ${result.totalEntries ?? 0} entries, ${(result.totalHours ?? 0).toFixed(1)} hours.`,
         });
         await loadHistory();
       } catch (err) {

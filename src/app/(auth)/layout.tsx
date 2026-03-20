@@ -14,9 +14,9 @@ export default async function AuthLayout({
   const user = session.user as Record<string, any>;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50/50">
       <Sidebar role={user.role} userName={user.name || "User"} />
-      <main className="lg:ml-64 min-h-screen">{children}</main>
+      <main className="lg:ml-[270px] min-h-screen">{children}</main>
     </div>
   );
 }

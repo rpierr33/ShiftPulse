@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MetricCard } from "@/components/shared/metric-card";
 import { Badge } from "@/components/ui/badge";
 import { ClockButton } from "@/components/worker/clock-button";
-import { Clock, Calendar, ArrowRight } from "lucide-react";
+import { Clock, Calendar, ArrowRight, Zap } from "lucide-react";
 import Link from "next/link";
 
 export default async function WorkerDashboard() {
@@ -59,13 +59,18 @@ export default async function WorkerDashboard() {
 
       <div className="p-4 lg:p-6 space-y-6">
         {/* Clock In/Out hero section */}
-        <Card className="bg-gradient-to-r from-blue-600 to-blue-800 text-white border-0">
-          <CardContent className="p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+        <Card className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white border-0 shadow-xl shadow-blue-600/15 overflow-hidden relative">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent_50%)]" />
+          <CardContent className="p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 relative">
             <div className="text-center md:text-left">
-              <h2 className="text-2xl font-bold mb-1">
+              <div className="inline-flex items-center gap-1.5 text-blue-200 text-xs font-medium bg-white/10 rounded-full px-3 py-1 mb-3">
+                <Zap size={12} />
+                Quick Action
+              </div>
+              <h2 className="text-2xl md:text-3xl font-bold mb-2 tracking-tight">
                 {clockStatus.isClockedIn ? "You're on the clock" : "Ready to start?"}
               </h2>
-              <p className="text-blue-100">
+              <p className="text-blue-100/80">
                 {clockStatus.isClockedIn
                   ? `Clocked in at ${clockStatus.clockInTime ? formatTime(clockStatus.clockInTime) : ""} — ${clockStatus.companyName || ""}`
                   : primaryCompany
@@ -102,23 +107,28 @@ export default async function WorkerDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <Calendar size={18} />
+                <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <Calendar size={14} className="text-blue-600" />
+                </div>
                 Today&apos;s Shifts
               </CardTitle>
-              <Link href="/worker/shifts" className="text-sm text-blue-600 hover:underline flex items-center gap-1">
+              <Link href="/worker/shifts" className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1 font-medium transition-colors">
                 View all <ArrowRight size={14} />
               </Link>
             </CardHeader>
             <CardContent>
               {todayShifts.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">No shifts scheduled today</p>
+                <div className="text-center py-8">
+                  <Calendar size={28} className="mx-auto text-gray-200 mb-2" />
+                  <p className="text-sm text-gray-400">No shifts scheduled today</p>
+                </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {todayShifts.map((a) => (
-                    <div key={a.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={a.id} className="flex items-center justify-between p-3.5 bg-gray-50/80 rounded-xl border border-gray-100/50 hover:bg-gray-50 transition-colors">
                       <div>
-                        <p className="font-medium text-sm">{a.shift?.title}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="font-medium text-sm text-gray-900">{a.shift?.title}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
                           {a.shift && `${formatTime(a.shift.startTime)} - ${formatTime(a.shift.endTime)}`}
                         </p>
                       </div>
@@ -136,23 +146,28 @@ export default async function WorkerDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <Clock size={18} />
+                <div className="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center">
+                  <Clock size={14} className="text-purple-600" />
+                </div>
                 Recent Entries
               </CardTitle>
-              <Link href="/worker/history" className="text-sm text-blue-600 hover:underline flex items-center gap-1">
+              <Link href="/worker/history" className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1 font-medium transition-colors">
                 View all <ArrowRight size={14} />
               </Link>
             </CardHeader>
             <CardContent>
               {weekEntries.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">No entries this week</p>
+                <div className="text-center py-8">
+                  <Clock size={28} className="mx-auto text-gray-200 mb-2" />
+                  <p className="text-sm text-gray-400">No entries this week</p>
+                </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {weekEntries.slice(0, 5).map((entry) => (
-                    <div key={entry.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={entry.id} className="flex items-center justify-between p-3.5 bg-gray-50/80 rounded-xl border border-gray-100/50 hover:bg-gray-50 transition-colors">
                       <div>
-                        <p className="font-medium text-sm">{entry.company.name}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="font-medium text-sm text-gray-900">{entry.company.name}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
                           {formatDate(entry.clockInTime)} &middot;{" "}
                           {formatTime(entry.clockInTime)}
                           {entry.clockOutTime ? ` - ${formatTime(entry.clockOutTime)}` : " (active)"}
@@ -160,7 +175,7 @@ export default async function WorkerDashboard() {
                       </div>
                       <div className="text-right">
                         {entry.duration ? (
-                          <span className="text-sm font-semibold">{formatDuration(entry.duration)}</span>
+                          <span className="text-sm font-semibold text-gray-900">{formatDuration(entry.duration)}</span>
                         ) : (
                           <Badge variant="success">Active</Badge>
                         )}
@@ -175,14 +190,17 @@ export default async function WorkerDashboard() {
 
         {/* Join company prompt if no companies */}
         {companies.length === 0 && (
-          <Card className="border-dashed border-2">
-            <CardContent className="p-6 text-center">
-              <h3 className="font-semibold text-lg mb-2">Join a Company</h3>
-              <p className="text-gray-500 text-sm mb-4">
+          <Card className="border-dashed border-2 border-gray-200">
+            <CardContent className="p-8 text-center">
+              <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Zap size={24} className="text-blue-600" />
+              </div>
+              <h3 className="font-semibold text-lg mb-2 text-gray-900">Join a Company</h3>
+              <p className="text-gray-500 text-sm mb-5 max-w-sm mx-auto">
                 Enter a join code from your employer to connect and start tracking your shifts.
               </p>
               <Link href="/worker/profile">
-                <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">
+                <button className="bg-blue-600 text-white px-6 py-2.5 rounded-xl hover:bg-blue-500 text-sm font-medium transition-all shadow-sm shadow-blue-600/20 hover:shadow-blue-500/30 active:scale-[0.98]">
                   Enter Join Code
                 </button>
               </Link>

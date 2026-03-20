@@ -3,9 +3,12 @@
 import { signIn, signOut } from "@/auth";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { z } from "zod";
 import { generateJoinCode } from "@/lib/utils";
 import { checkRateLimit, resetRateLimit } from "@/lib/rate-limit";
+import { sendEmail, passwordResetEmail } from "@/lib/email";
+import { sendVerificationEmail } from "@/actions/email-verification";
 
 const signUpSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -95,6 +98,11 @@ export async function signUpAction(formData: FormData) {
     });
   }
 
+  // Send verification email in the background (don't block signup)
+  sendVerificationEmail(user.id).catch((err) => {
+    console.error("[Auth] Failed to send verification email:", err);
+  });
+
   await signIn("credentials", {
     email,
     password,
@@ -141,4 +149,119 @@ export async function signInAction(formData: FormData) {
 
 export async function signOutAction() {
   await signOut({ redirectTo: "/login" });
+}
+
+// ─── Password Reset ─────────────────────────────────────────────
+
+const requestResetSchema = z.object({
+  email: z.string().email("Invalid email address"),
+});
+
+export async function requestPasswordReset(formData: FormData) {
+  const raw = { email: formData.get("email") as string };
+  const parsed = requestResetSchema.safeParse(raw);
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
+  }
+
+  const { email } = parsed.data;
+
+  // Rate limit reset requests
+  const rateCheck = await checkRateLimit(`password-reset:${email.toLowerCase()}`);
+  if (!rateCheck.allowed) {
+    // Still return success to not reveal if email exists
+    return { success: true };
+  }
+
+  const user = await db.user.findUnique({
+    where: { email: email.toLowerCase() },
+    select: { name: true, email: true },
+  });
+
+  if (user) {
+    // Delete any existing tokens for this email
+    await db.passwordResetToken.deleteMany({
+      where: { email: user.email },
+    });
+
+    // Generate secure token
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await db.passwordResetToken.create({
+      data: {
+        email: user.email,
+        token,
+        expiresAt,
+      },
+    });
+
+    // Send email
+    const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const resetUrl = `${APP_URL}/reset-password?token=${token}`;
+    const template = passwordResetEmail(user.name, resetUrl);
+
+    await sendEmail({
+      to: user.email,
+      subject: template.subject,
+      html: template.html,
+    });
+  }
+
+  // Always return success to not reveal whether email exists
+  return { success: true };
+}
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Reset token is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+export async function resetPassword(formData: FormData) {
+  const raw = {
+    token: formData.get("token") as string,
+    password: formData.get("password") as string,
+  };
+
+  const parsed = resetPasswordSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
+  }
+
+  const { token, password } = parsed.data;
+
+  const resetToken = await db.passwordResetToken.findUnique({
+    where: { token },
+  });
+
+  if (!resetToken) {
+    return { error: "Invalid or expired reset link. Please request a new one." };
+  }
+
+  if (resetToken.expiresAt < new Date()) {
+    // Clean up expired token
+    await db.passwordResetToken.delete({ where: { id: resetToken.id } });
+    return { error: "This reset link has expired. Please request a new one." };
+  }
+
+  const user = await db.user.findUnique({
+    where: { email: resetToken.email },
+  });
+
+  if (!user) {
+    return { error: "Invalid or expired reset link. Please request a new one." };
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  await db.user.update({
+    where: { id: user.id },
+    data: { passwordHash },
+  });
+
+  // Delete the used token
+  await db.passwordResetToken.delete({ where: { id: resetToken.id } });
+
+  return { success: true };
 }

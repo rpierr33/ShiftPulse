@@ -7,7 +7,7 @@ type TimeEntryForExport = {
   isManualEntry: boolean;
   evvStatus: string | null;
   status: string;
-  user: { name: string; email: string };
+  user: { name: string; email: string; workerProfile?: { hourlyRate: number | null } | null };
   shift: { title: string } | null;
 };
 
@@ -25,10 +25,12 @@ export function calculateOvertimeHours(
 }
 
 function escapeCSVField(value: string): string {
-  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
-    return `"${value.replace(/"/g, '""')}"`;
+  // Prevent CSV injection: prefix dangerous leading characters with a single quote
+  const sanitized = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  if (sanitized.includes(",") || sanitized.includes('"') || sanitized.includes("\n")) {
+    return `"${sanitized.replace(/"/g, '""')}"`;
   }
-  return value;
+  return sanitized;
 }
 
 export function generatePayrollCSV(
@@ -71,7 +73,7 @@ export function generatePayrollCSV(
     const overtimeHours = afterOT.overtime - beforeOT.overtime;
     const regularHours = hours - overtimeHours;
 
-    const rate = 0; // Rate comes from worker profile; 0 as default
+    const rate = entry.user.workerProfile?.hourlyRate ?? 0;
     const totalPay = regularHours * rate + overtimeHours * rate * overtimeMultiplier;
 
     return [

@@ -15,12 +15,12 @@ import {
   BarChart3,
   Settings,
   Shield,
-
   LogOut,
   Menu,
   X,
   Briefcase,
   CalendarDays,
+  ChevronRight,
 } from "lucide-react";
 import { useState } from "react";
 import { signOutAction } from "@/actions/auth";
@@ -32,31 +32,31 @@ type NavItem = {
 };
 
 const workerNav: NavItem[] = [
-  { label: "Dashboard", href: "/worker/dashboard", icon: <LayoutDashboard size={20} /> },
-  { label: "My Shifts", href: "/worker/shifts", icon: <Calendar size={20} /> },
-  { label: "Clock In/Out", href: "/worker/clock", icon: <Clock size={20} /> },
-  { label: "Time History", href: "/worker/history", icon: <History size={20} /> },
-  { label: "Profile", href: "/worker/profile", icon: <User size={20} /> },
+  { label: "Dashboard", href: "/worker/dashboard", icon: <LayoutDashboard size={18} /> },
+  { label: "My Shifts", href: "/worker/shifts", icon: <Calendar size={18} /> },
+  { label: "Clock In/Out", href: "/worker/clock", icon: <Clock size={18} /> },
+  { label: "Time History", href: "/worker/history", icon: <History size={18} /> },
+  { label: "Profile", href: "/worker/profile", icon: <User size={18} /> },
 ];
 
 const companyNav: NavItem[] = [
-  { label: "Dashboard", href: "/company/dashboard", icon: <LayoutDashboard size={20} /> },
-  { label: "Workers", href: "/company/workers", icon: <Users size={20} /> },
-  { label: "Schedules", href: "/company/schedules", icon: <CalendarDays size={20} /> },
-  { label: "Shifts", href: "/company/shifts", icon: <Calendar size={20} /> },
-  { label: "Assignments", href: "/company/assignments", icon: <Briefcase size={20} /> },
-  { label: "Time Entries", href: "/company/time-entries", icon: <Clock size={20} /> },
-  { label: "Reports", href: "/company/reports", icon: <BarChart3 size={20} /> },
-  { label: "Settings", href: "/company/settings", icon: <Settings size={20} /> },
+  { label: "Dashboard", href: "/company/dashboard", icon: <LayoutDashboard size={18} /> },
+  { label: "Workers", href: "/company/workers", icon: <Users size={18} /> },
+  { label: "Schedules", href: "/company/schedules", icon: <CalendarDays size={18} /> },
+  { label: "Shifts", href: "/company/shifts", icon: <Calendar size={18} /> },
+  { label: "Assignments", href: "/company/assignments", icon: <Briefcase size={18} /> },
+  { label: "Time Entries", href: "/company/time-entries", icon: <Clock size={18} /> },
+  { label: "Reports", href: "/company/reports", icon: <BarChart3 size={18} /> },
+  { label: "Settings", href: "/company/settings", icon: <Settings size={18} /> },
 ];
 
 const adminNav: NavItem[] = [
-  { label: "Dashboard", href: "/admin/dashboard", icon: <LayoutDashboard size={20} /> },
-  { label: "Companies", href: "/admin/companies", icon: <Building2 size={20} /> },
-  { label: "Users", href: "/admin/users", icon: <Users size={20} /> },
-  { label: "Time Entries", href: "/admin/time-entries", icon: <Clock size={20} /> },
-  { label: "Audit Log", href: "/admin/audit-log", icon: <FileText size={20} /> },
-  { label: "Settings", href: "/admin/settings", icon: <Settings size={20} /> },
+  { label: "Dashboard", href: "/admin/dashboard", icon: <LayoutDashboard size={18} /> },
+  { label: "Companies", href: "/admin/companies", icon: <Building2 size={18} /> },
+  { label: "Users", href: "/admin/users", icon: <Users size={18} /> },
+  { label: "Time Entries", href: "/admin/time-entries", icon: <Clock size={18} /> },
+  { label: "Audit Log", href: "/admin/audit-log", icon: <FileText size={18} /> },
+  { label: "Settings", href: "/admin/settings", icon: <Settings size={18} /> },
 ];
 
 function getNavItems(role: string): NavItem[] {
@@ -83,21 +83,22 @@ export function Sidebar({ role, userName }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const roleLabel = role === "COMPANY" ? "Company" : role === "ADMIN" ? "Admin" : "Worker";
+  const roleColor = role === "COMPANY" ? "from-purple-500 to-purple-700" : role === "ADMIN" ? "from-amber-500 to-orange-600" : "from-blue-500 to-blue-700";
 
   return (
     <>
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md border border-gray-200"
+        className="lg:hidden fixed top-4 left-4 z-50 p-2.5 bg-white rounded-xl shadow-lg border border-gray-100 hover:bg-gray-50 transition-colors"
       >
-        <Menu size={20} />
+        <Menu size={20} className="text-gray-700" />
       </button>
 
       {/* Overlay */}
       {mobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-fade-in"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -105,67 +106,81 @@ export function Sidebar({ role, userName }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 h-screen w-64 bg-slate-900 text-white flex flex-col z-50 transition-transform lg:translate-x-0",
+          "fixed left-0 top-0 h-screen w-[270px] bg-slate-950 text-white flex flex-col z-50 transition-transform duration-300 ease-out lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
+        {/* Subtle gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-blue-950/20 to-transparent pointer-events-none" />
+
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-700">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+        <div className="relative flex items-center justify-between p-5 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className={`w-9 h-9 bg-gradient-to-br ${roleColor} rounded-xl flex items-center justify-center shadow-lg`}>
               <Shield size={16} />
             </div>
             <div>
-              <h1 className="font-bold text-sm">ShiftPulse</h1>
-              <span className="text-xs text-slate-400">{roleLabel} Portal</span>
+              <h1 className="font-bold text-sm tracking-tight">ShiftPulse</h1>
+              <span className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">{roleLabel}</span>
             </div>
           </div>
           <button
             onClick={() => setMobileOpen(false)}
-            className="lg:hidden text-slate-400 hover:text-white"
+            className="lg:hidden text-slate-500 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-4">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm transition-colors",
-                  isActive
-                    ? "bg-blue-600 text-white font-medium"
-                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                )}
-              >
-                {item.icon}
-                {item.label}
-              </Link>
-            );
-          })}
+        <nav className="relative flex-1 overflow-y-auto py-4 px-3">
+          <div className="space-y-1">
+            {navItems.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    "relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 group",
+                    isActive
+                      ? "bg-blue-600/15 text-blue-400 font-medium"
+                      : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                  )}
+                >
+                  {isActive && (
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-blue-500 rounded-r-full" />
+                  )}
+                  <span className={cn(
+                    "transition-colors",
+                    isActive ? "text-blue-400" : "text-slate-500 group-hover:text-slate-300"
+                  )}>
+                    {item.icon}
+                  </span>
+                  <span className="flex-1">{item.label}</span>
+                  {isActive && <ChevronRight size={14} className="text-blue-400/50" />}
+                </Link>
+              );
+            })}
+          </div>
         </nav>
 
         {/* Footer */}
-        <div className="border-t border-slate-700 p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-xs font-medium">
+        <div className="relative border-t border-white/5 p-4">
+          <div className="flex items-center gap-3 mb-3 p-2 rounded-xl hover:bg-white/5 transition-colors cursor-default">
+            <div className={`w-9 h-9 bg-gradient-to-br ${roleColor} rounded-xl flex items-center justify-center text-xs font-bold shadow-md`}>
               {userName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{userName}</p>
-              <p className="text-xs text-slate-400">{roleLabel}</p>
+              <p className="text-[11px] text-slate-500">{roleLabel} Account</p>
             </div>
           </div>
           <form action={signOutAction}>
             <button
               type="submit"
-              className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors w-full"
+              className="flex items-center gap-2.5 text-sm text-slate-500 hover:text-red-400 transition-colors w-full px-2 py-2 rounded-lg hover:bg-red-500/5"
             >
               <LogOut size={16} />
               Sign Out

@@ -25,8 +25,8 @@ export function Dialog({ open, onClose, children }: DialogProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative z-50 w-full max-w-lg mx-4 bg-white rounded-xl shadow-xl">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-fade-in" onClick={onClose} />
+      <div className="relative z-50 w-full max-w-lg mx-4 bg-white rounded-2xl shadow-2xl shadow-gray-900/10 animate-scale-in border border-gray-100">
         {children}
       </div>
     </div>
@@ -38,7 +38,7 @@ export function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLD
 }
 
 export function DialogTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h2 className={cn("text-lg font-semibold", className)} {...props} />;
+  return <h2 className={cn("text-lg font-semibold text-gray-900 tracking-tight", className)} {...props} />;
 }
 
 export function DialogContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {

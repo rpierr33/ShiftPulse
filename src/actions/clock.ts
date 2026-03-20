@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth-utils";
 import { computeDurationMinutes } from "@/lib/utils";
 import { checkGeofence } from "@/lib/geofence";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { revalidatePath } from "next/cache";
 
 interface LocationData {
@@ -37,6 +38,15 @@ export async function clockIn(
 ) {
   const user = await getSessionUser();
 
+  // Rate limit: 30 attempts per 5 minutes per user
+  const rateCheck = await checkRateLimit(`clock:${user.id}`, {
+    windowMs: 5 * 60 * 1000,
+    maxAttempts: 30,
+  });
+  if (!rateCheck.allowed) {
+    return { error: `Too many clock attempts. Try again in ${Math.ceil((rateCheck.retryAfter || 60) / 60)} minutes.` };
+  }
+
   // Verify membership
   const membership = await db.companyMembership.findFirst({
     where: { userId: user.id, companyId, status: "APPROVED" },
@@ -53,12 +63,15 @@ export async function clockIn(
     return { error: "You must select a shift before clocking in" };
   }
 
-  // Block duplicate active clock-ins
+  // Block duplicate active clock-ins across ALL companies
   const activeEntry = await db.timeEntry.findFirst({
-    where: { userId: user.id, companyId, clockOutTime: null },
+    where: { userId: user.id, clockOutTime: null },
+    include: { company: { select: { name: true } } },
   });
   if (activeEntry) {
-    return { error: "You already have an active clock-in" };
+    return {
+      error: `You are already clocked in at ${activeEntry.company.name}. Clock out first.`,
+    };
   }
 
   // Resolve shift for geofence check
@@ -150,6 +163,15 @@ export async function clockOut(
   location?: LocationData
 ) {
   const user = await getSessionUser();
+
+  // Rate limit: 30 attempts per 5 minutes per user
+  const rateCheck = await checkRateLimit(`clock:${user.id}`, {
+    windowMs: 5 * 60 * 1000,
+    maxAttempts: 30,
+  });
+  if (!rateCheck.allowed) {
+    return { error: `Too many clock attempts. Try again in ${Math.ceil((rateCheck.retryAfter || 60) / 60)} minutes.` };
+  }
 
   // Find active time entry
   const activeEntry = await db.timeEntry.findFirst({
@@ -263,7 +285,33 @@ export async function createManualTimeEntry(
   const clockIn = new Date(`${date}T${clockInTime}`);
   const clockOut = new Date(`${date}T${clockOutTime}`);
 
+  if (isNaN(clockIn.getTime()) || isNaN(clockOut.getTime())) {
+    return { error: "Invalid date or time values" };
+  }
+
   if (clockOut <= clockIn) return { error: "Clock out must be after clock in" };
+
+  // Check for overlapping time entries for this user
+  const overlapping = await db.timeEntry.findFirst({
+    where: {
+      userId: user.id,
+      AND: [
+        { clockInTime: { lt: clockOut } },
+        {
+          OR: [
+            { clockOutTime: { gt: clockIn } },
+            { clockOutTime: null }, // active (unclosed) entry overlaps any future time
+          ],
+        },
+      ],
+    },
+    include: { company: { select: { name: true } } },
+  });
+  if (overlapping) {
+    return {
+      error: `This time entry overlaps with an existing entry at ${overlapping.company.name}`,
+    };
+  }
 
   const duration = computeDurationMinutes(clockIn, clockOut);
 

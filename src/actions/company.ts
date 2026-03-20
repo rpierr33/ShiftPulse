@@ -436,7 +436,6 @@ export async function assignWorkerToShift(shiftId: string, workerProfileId: stri
 
   const shift = await db.shift.findUnique({
     where: { id: shiftId },
-    include: { _count: { select: { assignments: true } } },
   });
   if (!shift) return { error: "Shift not found" };
 
@@ -451,8 +450,11 @@ export async function assignWorkerToShift(shiftId: string, workerProfileId: stri
   });
   if (!callerMembership) return { error: "Not authorized" };
 
-  // Check capacity
-  if (shift._count.assignments >= shift.capacity) {
+  // Check capacity — only count CONFIRMED or PENDING assignments
+  const activeAssignmentCount = await db.assignment.count({
+    where: { shiftId, status: { in: ["CONFIRMED", "PENDING"] } },
+  });
+  if (activeAssignmentCount >= shift.capacity) {
     return { error: "Shift is already at full capacity" };
   }
 
@@ -461,6 +463,35 @@ export async function assignWorkerToShift(shiftId: string, workerProfileId: stri
     where: { shiftId, workerProfileId, status: { not: "CANCELLED" } },
   });
   if (existing) return { error: "Worker is already assigned to this shift" };
+
+  // Check for overlapping shifts for this worker on the same date/time
+  const workerProfile = await db.workerProfile.findUnique({
+    where: { id: workerProfileId },
+    select: { id: true, userId: true },
+  });
+  if (!workerProfile) return { error: "Worker profile not found" };
+
+  if (shift.startTime && shift.endTime) {
+    const overlappingAssignment = await db.assignment.findFirst({
+      where: {
+        workerProfileId,
+        status: { in: ["CONFIRMED", "PENDING"] },
+        shift: {
+          id: { not: shiftId },
+          date: shift.date,
+          startTime: { lt: shift.endTime },
+          endTime: { gt: shift.startTime },
+          deletedAt: null,
+        },
+      },
+      include: { shift: { select: { title: true } } },
+    });
+    if (overlappingAssignment) {
+      return {
+        error: `Worker has an overlapping shift: "${overlappingAssignment.shift?.title ?? "Unknown"}"`,
+      };
+    }
+  }
 
   const assignment = await db.assignment.create({
     data: {
@@ -482,11 +513,7 @@ export async function assignWorkerToShift(shiftId: string, workerProfileId: stri
     },
   });
 
-  // Notify the worker
-  const workerProfile = await db.workerProfile.findUnique({
-    where: { id: workerProfileId },
-    select: { userId: true },
-  });
+  // Notify the worker (workerProfile already fetched above)
   if (workerProfile) {
     await db.notification.create({
       data: {
@@ -654,10 +681,33 @@ export async function requestShift(shiftId: string) {
   if (existing) return { error: "You already have a request or assignment for this shift" };
 
   const confirmedCount = await db.assignment.count({
-    where: { shiftId, status: { in: ["CONFIRMED", "IN_PROGRESS"] } },
+    where: { shiftId, status: { in: ["CONFIRMED", "PENDING"] } },
   });
   if (confirmedCount >= shift.capacity) {
     return { error: "This shift is already at full capacity" };
+  }
+
+  // Check for overlapping shifts for this worker on the same date/time
+  if (shift.startTime && shift.endTime) {
+    const overlappingAssignment = await db.assignment.findFirst({
+      where: {
+        workerProfileId: workerProfile.id,
+        status: { in: ["CONFIRMED", "PENDING"] },
+        shift: {
+          id: { not: shiftId },
+          date: shift.date,
+          startTime: { lt: shift.endTime },
+          endTime: { gt: shift.startTime },
+          deletedAt: null,
+        },
+      },
+      include: { shift: { select: { title: true } } },
+    });
+    if (overlappingAssignment) {
+      return {
+        error: `You have an overlapping shift: "${overlappingAssignment.shift?.title ?? "Unknown"}"`,
+      };
+    }
   }
 
   const assignment = await db.assignment.create({
