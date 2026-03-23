@@ -12,7 +12,58 @@ datasource db {
 enum UserRole {
   WORKER
   COMPANY
+  CLIENT
   ADMIN
+}
+
+enum SubscriptionTier {
+  BASIC
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum ProviderType {
+  HOME_HEALTH_AGENCY
+  NURSE_REGISTRY
+  HOSPICE_PROVIDER
+  SKILLED_NURSING_FACILITY
+  ASSISTED_LIVING_FACILITY
+  ADULT_DAY_CARE
+  REHABILITATION_CENTER
+  PRIVATE_DUTY_NURSING
+  GROUP_HOME
+  PHYSICIAN_PRACTICE
+  HOME_CARE_NON_MEDICAL
+  MEMORY_CARE_FACILITY
+  CONTINUING_CARE_COMMUNITY
+  OTHER
+}
+
+enum WorkerType {
+  RN
+  LPN
+  CNA
+  HHA
+  ARNP
+  MEDICAL_ASSISTANT
+  PHYSICAL_THERAPIST
+  PT_ASSISTANT
+  OCCUPATIONAL_THERAPIST
+  OT_ASSISTANT
+  SPEECH_LANGUAGE_PATHOLOGIST
+  RESPIRATORY_THERAPIST
+  LICENSED_CLINICAL_SOCIAL_WORKER
+  COMPANION_SITTER
+  PERSONAL_CARE_ATTENDANT
+  BABYSITTER_CHILDCARE
+  OTHER
+}
+
+enum CredentialStatus {
+  PENDING
+  VERIFIED
+  EXPIRED
+  REJECTED
 }
 
 enum MembershipStatus {
@@ -66,6 +117,13 @@ enum AuditAction {
   MANUAL_EDIT
   EVV_FLAG
   EXPORT_GENERATED
+  CREDENTIAL_UPLOADED
+  CREDENTIAL_VERIFIED
+  CREDENTIAL_EXPIRED
+  REVIEW_CREATED
+  SUBSCRIPTION_CHANGED
+  CMS1500_CREATED
+  CMS1500_EXPORTED
 }
 
 enum PostingStatus {
@@ -97,30 +155,38 @@ enum DayOfWeek {
 // ─── Models ──────────────────────────────────────────────────────
 
 model User {
-  id             String    @id @default(cuid())
-  email          String    @unique
-  name           String
-  passwordHash   String
-  role           UserRole
-  phone          String?
-  avatarUrl      String?
-  timezone       String    @default("America/New_York")
-  emailVerified  DateTime?
-  isActive       Boolean   @default(true)
-  deletedAt      DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                   String    @id @default(cuid())
+  email                String    @unique
+  name                 String
+  passwordHash         String
+  role                 UserRole
+  phone                String?
+  avatarUrl            String?
+  timezone             String    @default("America/New_York")
+  emailVerified        DateTime?
+  isActive             Boolean   @default(true)
+  onboardingCompleted  Boolean   @default(false)
+  deletedAt            DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  workerProfile  WorkerProfile?
-  companyProfile CompanyProfile?
-  memberships    CompanyMembership[]
-  clockEvents    ClockEvent[]
-  timeEntries    TimeEntry[]
-  auditLogs      AuditLog[]        @relation("AuditActor")
-  notifications  Notification[]
-  sessions       Session[]
-  accounts       Account[]
-  exports        PayrollExport[]
+  workerProfile          WorkerProfile?
+  companyProfile         CompanyProfile?
+  clientProfile          ClientProfile?
+  memberships            CompanyMembership[]
+  clockEvents            ClockEvent[]
+  timeEntries            TimeEntry[]
+  auditLogs              AuditLog[]                  @relation("AuditActor")
+  notifications          Notification[]
+  sessions               Session[]
+  accounts               Account[]
+  exports                PayrollExport[]
+  conversationParticipants ConversationParticipant[]
+  messagesSent           Message[]
+  reviewsGiven           Review[]                    @relation("ReviewsGiven")
+  reviewsReceived        Review[]                    @relation("ReviewsReceived")
+  serviceLogs            ServiceLog[]                @relation("ServiceLogWorker")
+  bookingsAsClient       Booking[]                   @relation("BookingClient")
 
   @@map("users")
 }
@@ -166,22 +232,38 @@ model VerificationToken {
 }
 
 model WorkerProfile {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  licenseNumber   String?
-  licenseState    String?
-  licenseExpiry   DateTime?
-  specialties     String[] @default([])
-  certifications  String[] @default([])
-  bio             String?
-  hourlyRate      Float?
-  isAvailable     Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                   String      @id @default(cuid())
+  userId               String      @unique
+  workerType           WorkerType?
+  licenseNumber        String?
+  licenseState         String?
+  licenseExpiry        DateTime?
+  specialties          String[]    @default([])
+  certifications       String[]    @default([])
+  bio                  String?
+  hourlyRate           Float?
+  yearsExperience      Int?
+  serviceRadiusMiles   Int?
+  city                 String?
+  state                String?
+  zipCode              String?
+  isAvailable          Boolean     @default(true)
+  isMarketplaceVisible Boolean     @default(false)
+  isValidated          Boolean     @default(false)
+  isFeatured           Boolean     @default(false)
+  featuredUntil        DateTime?
+  acceptsPrivateClients Boolean    @default(true)
+  servicesOffered      String[]    @default([])
+  preferredRates       Json?       // { "companion_care": 20, "skilled_nursing": 40, ... }
+  profileCompleteness  Int         @default(0)
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
 
-  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assignments      Assignment[]
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments       Assignment[]
   availabilitySlots AvailabilitySlot[]
+  credentials       Credential[]
+  bookings          Booking[]
 
   @@map("worker_profiles")
 }
@@ -205,19 +287,22 @@ model AvailabilitySlot {
 }
 
 model CompanyProfile {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  companyName String
-  address     String?
-  city        String?
-  state       String?
-  zipCode     String?
-  phone       String?
-  website     String?
-  npiNumber   String?
-  taxId       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String       @id @default(cuid())
+  userId       String       @unique
+  companyName  String
+  description  String?
+  logoUrl      String?
+  providerType ProviderType?
+  address      String?
+  city         String?
+  state        String?
+  zipCode      String?
+  phone        String?
+  website      String?
+  npiNumber    String?
+  taxId        String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -225,17 +310,25 @@ model CompanyProfile {
 }
 
 model Company {
-  id                    String   @id @default(cuid())
+  id                    String       @id @default(cuid())
   name                  String
-  slug                  String   @unique
-  joinCode              String   @unique
-  autoApproveWorkers    Boolean  @default(false)
-  allowManualEntry      Boolean  @default(false)
-  allowBackdatedEntry   Boolean  @default(false)
-  requireShiftSelection Boolean  @default(false)
-  enableGeofencing      Boolean  @default(false)
-  geofenceRadiusMeters  Int      @default(200)
-  timezone              String   @default("America/New_York")
+  slug                  String       @unique
+  joinCode              String       @unique
+  providerType          ProviderType?
+  description           String?
+  logoUrl               String?
+  servicesOffered       String[]     @default([])
+  serviceAreas          String[]     @default([])
+  autoApproveWorkers    Boolean      @default(false)
+  allowManualEntry      Boolean      @default(false)
+  allowBackdatedEntry   Boolean      @default(false)
+  requireShiftSelection Boolean      @default(false)
+  enableGeofencing      Boolean      @default(false)
+  geofenceRadiusMeters  Int          @default(200)
+  isMarketplaceVisible  Boolean      @default(false)
+  isFeatured            Boolean      @default(false)
+  featuredUntil         DateTime?
+  timezone              String       @default("America/New_York")
   address               String?
   city                  String?
   state                 String?
@@ -243,10 +336,10 @@ model Company {
   phone                 String?
   latitude              Float?
   longitude             Float?
-  isActive              Boolean  @default(true)
+  isActive              Boolean      @default(true)
   deletedAt             DateTime?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
 
   memberships    CompanyMembership[]
   shifts         Shift[]
@@ -258,8 +351,34 @@ model Company {
   auditLogs      AuditLog[]
   settings       Settings?
   exports        PayrollExport[]
+  subscription   Subscription?
+  conversations  Conversation[]
+  serviceLogs    ServiceLog[]
+  cms1500Forms   CMS1500Form[]
+  locations      Location[]
+  reviews        Review[]
 
   @@map("companies")
+}
+
+model Subscription {
+  id                   String           @id @default(cuid())
+  companyId            String           @unique
+  tier                 SubscriptionTier @default(BASIC)
+  status               String           @default("active")
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  stripePriceId        String?
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean          @default(false)
+  trialEndsAt          DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
 }
 
 model CompanyMembership {
@@ -280,6 +399,30 @@ model CompanyMembership {
   @@map("company_memberships")
 }
 
+model Credential {
+  id               String           @id @default(cuid())
+  workerProfileId  String
+  type             String           // "RN_LICENSE", "CNA_CERT", "CPR", "TB_TEST", "BACKGROUND_CHECK", etc.
+  name             String
+  licenseNumber    String?
+  issuingAuthority String?
+  issueDate        DateTime?
+  expiryDate       DateTime?
+  status           CredentialStatus @default(PENDING)
+  documentUrl      String?
+  verifiedAt       DateTime?
+  verifiedBy       String?
+  notes            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  workerProfile WorkerProfile @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+
+  @@index([workerProfileId])
+  @@index([expiryDate])
+  @@map("credentials")
+}
+
 model ShiftTemplate {
   id          String    @id @default(cuid())
   companyId   String
@@ -292,6 +435,8 @@ model ShiftTemplate {
   endTime     String    // "15:00" format
   capacity    Int       @default(1)
   daysOfWeek  DayOfWeek[]
+  requiredWorkerTypes  WorkerType[] @default([])
+  requiredCredentials  String[]     @default([])
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -302,26 +447,33 @@ model ShiftTemplate {
 }
 
 model Shift {
-  id          String      @id @default(cuid())
-  companyId   String
-  title       String
-  description String?
-  location    String?
-  latitude    Float?
-  longitude   Float?
-  date        DateTime
-  startTime   DateTime
-  endTime     DateTime
-  status      ShiftStatus @default(OPEN)
-  capacity    Int         @default(1)
-  deletedAt   DateTime?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id                   String       @id @default(cuid())
+  companyId            String
+  title                String
+  description          String?
+  location             String?
+  locationId           String?
+  latitude             Float?
+  longitude            Float?
+  date                 DateTime
+  startTime            DateTime
+  endTime              DateTime
+  status               ShiftStatus  @default(OPEN)
+  capacity             Int          @default(1)
+  hourlyRate           Float?
+  requiredWorkerTypes  WorkerType[] @default([])
+  requiredCredentials  String[]     @default([])
+  isMarketplaceVisible Boolean      @default(false)
+  deletedAt            DateTime?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
 
-  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  assignments Assignment[]
-  timeEntries TimeEntry[]
-  clockEvents ClockEvent[]
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  shiftLocation Location?      @relation(fields: [locationId], references: [id])
+  assignments   Assignment[]
+  timeEntries   TimeEntry[]
+  clockEvents   ClockEvent[]
+  conversations Conversation[]
 
   @@map("shifts")
 }
@@ -389,36 +541,37 @@ model Assignment {
 }
 
 model TimeEntry {
-  id              String          @id @default(cuid())
-  userId          String
-  companyId       String
-  shiftId         String?
-  assignmentId    String?
-  clockInTime     DateTime
-  clockOutTime    DateTime?
-  clockInNote     String?
-  clockOutNote    String?
-  duration        Float?          // in minutes
-  isManualEntry   Boolean         @default(false)
-  status          TimeEntryStatus @default(PENDING)
-  approvedBy      String?
-  approvedAt      DateTime?
-  rejectionReason String?
-  originalValues  Json?           // stores pre-edit values
-  evvStatus       String?         // "verified", "flagged", "out_of_range"
-  clockInLat      Float?
-  clockInLng      Float?
-  clockOutLat     Float?
-  clockOutLng     Float?
-  distanceFromSite Float?         // meters from shift location
-  deletedAt       DateTime?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id               String          @id @default(cuid())
+  userId           String
+  companyId        String
+  shiftId          String?
+  assignmentId     String?
+  clockInTime      DateTime
+  clockOutTime     DateTime?
+  clockInNote      String?
+  clockOutNote     String?
+  duration         Float?          // in minutes
+  isManualEntry    Boolean         @default(false)
+  status           TimeEntryStatus @default(PENDING)
+  approvedBy       String?
+  approvedAt       DateTime?
+  rejectionReason  String?
+  originalValues   Json?           // stores pre-edit values
+  evvStatus        String?         // "verified", "flagged", "out_of_range"
+  clockInLat       Float?
+  clockInLng       Float?
+  clockOutLat      Float?
+  clockOutLng      Float?
+  distanceFromSite Float?          // meters from shift location
+  deletedAt        DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  shift      Shift?      @relation(fields: [shiftId], references: [id])
-  assignment Assignment? @relation(fields: [assignmentId], references: [id])
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  shift       Shift?       @relation(fields: [shiftId], references: [id])
+  assignment  Assignment?  @relation(fields: [assignmentId], references: [id])
+  serviceLogs ServiceLog[]
 
   @@map("time_entries")
 }
@@ -501,6 +654,12 @@ model Settings {
   autoDeductBreak        Boolean @default(false)
   enableEmailNotifications Boolean @default(true)
   enableEvv              Boolean @default(false)
+  // Florida compliance
+  enableDailyOvertimeRule  Boolean @default(false)
+  dailyOvertimeThreshold   Float   @default(10) // hours
+  minRestBetweenShifts     Float   @default(8) // hours
+  maxConsecutiveHours      Float   @default(16)
+  requireBreakAfterHours   Float   @default(6)
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
@@ -527,9 +686,273 @@ model PayrollExport {
   @@map("payroll_exports")
 }
 
+// ─── Messaging ───────────────────────────────────────────────────
+
+model Conversation {
+  id        String   @id @default(cuid())
+  type      String   @default("direct") // "direct", "shift_thread", "broadcast"
+  title     String?
+  companyId String?
+  shiftId   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+  company      Company? @relation(fields: [companyId], references: [id])
+  shift        Shift?   @relation(fields: [shiftId], references: [id])
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String    @id @default(cuid())
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String
+  isSystem       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+// ─── Reviews & Marketplace ───────────────────────────────────────
+
+model Review {
+  id              String   @id @default(cuid())
+  reviewerId      String
+  targetUserId    String?
+  targetCompanyId String?
+  rating          Int      // 1-5
+  title           String?
+  content         String?
+  isVerified      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  reviewer      User     @relation("ReviewsGiven", fields: [reviewerId], references: [id], onDelete: Cascade)
+  targetUser    User?    @relation("ReviewsReceived", fields: [targetUserId], references: [id], onDelete: Cascade)
+  targetCompany Company? @relation(fields: [targetCompanyId], references: [id], onDelete: Cascade)
+
+  @@index([targetUserId])
+  @@index([targetCompanyId])
+  @@map("reviews")
+}
+
+// ─── Service Documentation & Claims ─────────────────────────────
+
+model ServiceLog {
+  id             String   @id @default(cuid())
+  timeEntryId    String
+  companyId      String
+  workerId       String
+  serviceDate    DateTime
+  serviceType    String
+  procedureCodes String[] @default([])
+  diagnosisCodes String[] @default([])
+  units          Float    @default(1)
+  notes          String?
+  status         String   @default("draft") // draft, submitted, reviewed
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  timeEntry  TimeEntry    @relation(fields: [timeEntryId], references: [id])
+  company    Company      @relation(fields: [companyId], references: [id])
+  worker     User         @relation("ServiceLogWorker", fields: [workerId], references: [id])
+  cms1500    CMS1500Form?
+
+  @@index([companyId])
+  @@map("service_logs")
+}
+
+model CMS1500Form {
+  id                     String    @id @default(cuid())
+  companyId              String
+  serviceLogId           String?   @unique
+  // Box 1 - Insurance type
+  insuranceType          String?   // "medicare", "medicaid", "tricare", "champva", "group", "feca", "other"
+  // Box 1a - Insured's ID
+  insuredId              String?
+  // Box 2 - Patient Name
+  patientLastName        String?
+  patientFirstName       String?
+  patientMiddle          String?
+  // Box 3 - Patient DOB & Sex
+  patientDob             DateTime?
+  patientSex             String?
+  // Box 4 - Insured's Name
+  insuredName            String?
+  // Box 5 - Patient Address
+  patientAddress         String?
+  patientCity            String?
+  patientState           String?
+  patientZip             String?
+  patientPhone           String?
+  // Box 6 - Patient Relationship
+  patientRelationship    String?   // "self", "spouse", "child", "other"
+  // Box 7 - Insured Address
+  insuredAddress         String?
+  insuredCity            String?
+  insuredState           String?
+  insuredZip             String?
+  insuredPhone           String?
+  // Box 9 - Other Insured
+  otherInsuredName       String?
+  otherInsuredPolicy     String?
+  // Box 11 - Group Number
+  groupNumber            String?
+  // Box 11a - Insured DOB & Sex
+  insuredDob             DateTime?
+  insuredSex             String?
+  // Box 11c - Insurance Plan
+  insurancePlanName      String?
+  // Box 14 - Date of Current Illness
+  currentIllnessDate     DateTime?
+  // Box 17 - Referring Provider
+  referringProviderName  String?
+  referringProviderNpi   String?
+  // Box 19 - Additional Info
+  additionalInfo         String?
+  // Box 21 - Diagnosis Codes (ICD-10, up to 12)
+  diagnosisCodes         String[]  @default([])
+  // Box 24 - Service Lines (JSON array)
+  serviceLines           Json?
+  // Box 25 - Federal Tax ID
+  federalTaxId           String?
+  federalTaxIdType       String?   // "EIN" or "SSN"
+  // Box 26 - Patient Account Number
+  patientAccountNumber   String?
+  // Box 27 - Accept Assignment
+  acceptAssignment       Boolean   @default(true)
+  // Box 28 - Total Charges
+  totalCharges           Float?
+  // Box 29 - Amount Paid
+  amountPaid             Float?
+  // Box 31 - Provider Signature
+  providerSignatureDate  DateTime?
+  // Box 32 - Service Facility
+  facilityName           String?
+  facilityAddress        String?
+  facilityNpi            String?
+  // Box 33 - Billing Provider
+  billingProviderName    String?
+  billingProviderAddress String?
+  billingProviderNpi     String?
+  billingProviderPhone   String?
+  billingProviderTaxId   String?
+  // Status
+  status                 String    @default("draft") // draft, completed, exported
+  pdfUrl                 String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  company    Company     @relation(fields: [companyId], references: [id])
+  serviceLog ServiceLog? @relation(fields: [serviceLogId], references: [id])
+
+  @@index([companyId])
+  @@map("cms_1500_forms")
+}
+
+// ─── Multi-location ──────────────────────────────────────────────
+
+model Location {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  address   String?
+  city      String?
+  state     String?
+  zipCode   String?
+  latitude  Float?
+  longitude Float?
+  isDefault Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  shifts  Shift[]
+
+  @@index([companyId])
+  @@map("locations")
+}
+
+// ─── Private Clients ─────────────────────────────────────────────
+
+model ClientProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  relationship      String?  // "self", "parent", "child", "spouse", "other"
+  careRecipientName String?
+  careNeeds         String?  // Free-text description
+  address           String?
+  city              String?
+  state             String?
+  zipCode           String?
+  preferredSchedule String?  // "mornings", "afternoons", "evenings", "overnight", "flexible"
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("client_profiles")
+}
+
+model Booking {
+  id              String   @id @default(cuid())
+  clientId        String
+  workerProfileId String
+  status          String   @default("pending") // pending, accepted, declined, completed, cancelled
+  serviceType     String   // "companion_care", "skilled_nursing", etc.
+  startDate       DateTime
+  endDate         DateTime?
+  startTime       String?  // "09:00"
+  endTime         String?  // "17:00"
+  isRecurring     Boolean  @default(false)
+  recurringDays   DayOfWeek[] @default([])
+  hourlyRate      Float?
+  totalHours      Float?
+  notes           String?
+  clientNotes     String?
+  workerNotes     String?
+  declineReason   String?
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  client        User           @relation("BookingClient", fields: [clientId], references: [id], onDelete: Cascade)
+  workerProfile WorkerProfile  @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([workerProfileId])
+  @@map("bookings")
+}
+
+// ─── Auth Tokens ─────────────────────────────────────────────────
+
 model RateLimitEntry {
   id         String   @id @default(cuid())
-  key        String   // "login:ip:1.2.3.4" or "login:email:foo@bar.com"
+  key        String
   attempts   Int      @default(1)
   lastAttempt DateTime @default(now())
   expiresAt  DateTime

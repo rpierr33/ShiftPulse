@@ -22,7 +22,7 @@ export default async function AdminSettingsPage() {
             <div className="grid sm:grid-cols-2 gap-6">
               <div>
                 <label className="text-sm text-gray-500">Platform Name</label>
-                <p className="font-medium">ShiftPulse</p>
+                <p className="font-medium">CareCircle</p>
               </div>
               <div>
                 <label className="text-sm text-gray-500">Version</label>

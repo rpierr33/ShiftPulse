@@ -1,19 +1,38 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { signUpAction } from "@/actions/auth";
-import { Shield, User, Building2, ArrowRight } from "lucide-react";
+import { Shield, User, Building2, Heart, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function SignUpPage() {
+  return (
+    <Suspense>
+      <SignUpForm />
+    </Suspense>
+  );
+}
+
+function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlRole = searchParams.get("role") as "WORKER" | "COMPANY" | "CLIENT" | null;
+  const hasPresetRole = urlRole !== null && ["WORKER", "COMPANY", "CLIENT"].includes(urlRole);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [role, setRole] = useState<"WORKER" | "COMPANY">("WORKER");
+  const [role, setRole] = useState<"WORKER" | "COMPANY" | "CLIENT">(
+    hasPresetRole ? urlRole! : "WORKER"
+  );
+
+  const roleLabels: Record<string, string> = {
+    WORKER: "healthcare worker",
+    COMPANY: "healthcare provider",
+    CLIENT: "care seeker",
+  };
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -32,7 +51,8 @@ export default function SignUpPage() {
     }
 
     if (role === "WORKER") router.push("/worker/dashboard");
-    else router.push("/company/dashboard");
+    else if (role === "COMPANY") router.push("/company/dashboard");
+    else if (role === "CLIENT") router.push("/client/dashboard");
   }
 
   return (
@@ -58,19 +78,23 @@ export default function SignUpPage() {
             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25 group-hover:shadow-blue-500/40 transition-shadow">
               <Shield className="text-white" size={24} />
             </div>
-            <span className="text-2xl font-bold text-white tracking-tight">ShiftPulse</span>
+            <span className="text-2xl font-bold text-white tracking-tight">CareCircle</span>
           </Link>
         </div>
 
         {/* Card */}
         <div className="glass rounded-2xl p-8 shadow-2xl shadow-black/20">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-white mb-2">Create an account</h1>
-            <p className="text-sm text-slate-400">Join ShiftPulse and get started</p>
+            <h1 className="text-2xl font-bold text-white mb-2">
+              {hasPresetRole ? `Sign up as a ${roleLabels[role]}` : "Create an account"}
+            </h1>
+            <p className="text-sm text-slate-400">
+              {hasPresetRole ? "Fill in your details to get started" : "Join CareCircle and get started"}
+            </p>
           </div>
 
-          {/* Role selector */}
-          <div className="grid grid-cols-2 gap-3 mb-8">
+          {/* Role selector — hidden when role is pre-selected from landing page */}
+          {!hasPresetRole && <div className="grid grid-cols-3 gap-3 mb-8">
             <button
               type="button"
               onClick={() => setRole("WORKER")}
@@ -107,7 +131,25 @@ export default function SignUpPage() {
               </div>
               <span className="text-sm font-medium">Company</span>
             </button>
-          </div>
+            <button
+              type="button"
+              onClick={() => setRole("CLIENT")}
+              className={cn(
+                "flex flex-col items-center gap-3 p-5 rounded-xl border transition-all duration-300",
+                role === "CLIENT"
+                  ? "border-blue-500/50 bg-blue-500/10 text-blue-400 shadow-lg shadow-blue-500/10"
+                  : "border-white/10 text-slate-400 hover:border-white/20 hover:bg-white/5"
+              )}
+            >
+              <div className={cn(
+                "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
+                role === "CLIENT" ? "bg-blue-500/20" : "bg-white/5"
+              )}>
+                <Heart size={20} />
+              </div>
+              <span className="text-sm font-medium">I Need Care</span>
+            </button>
+          </div>}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (

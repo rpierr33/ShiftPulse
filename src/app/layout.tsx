@@ -8,13 +8,13 @@ import { InstallPrompt } from "@/components/pwa/install-prompt";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ShiftPulse - Workforce Timekeeping Platform",
+  title: "CareCircle - Workforce Timekeeping Platform",
   description: "Workforce timekeeping and shift management for nurse registries and staffing organizations",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "ShiftPulse",
+    title: "CareCircle",
   },
 };
 

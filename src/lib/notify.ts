@@ -73,7 +73,7 @@ function buildEmailHtml(params: {
   return `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 16px;">
       <div style="background: #2563eb; padding: 20px 24px; border-radius: 12px 12px 0 0;">
-        <h1 style="color: white; font-size: 18px; margin: 0;">ShiftPulse</h1>
+        <h1 style="color: white; font-size: 18px; margin: 0;">CareCircle</h1>
       </div>
       <div style="background: #ffffff; border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 12px 12px;">
         <p style="color: #374151; margin: 0 0 8px;">Hi ${recipientName},</p>
@@ -86,7 +86,7 @@ function buildEmailHtml(params: {
         }
       </div>
       <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 16px;">
-        You received this email because you have notifications enabled on ShiftPulse.
+        You received this email because you have notifications enabled on CareCircle.
       </p>
     </div>
   `.trim();

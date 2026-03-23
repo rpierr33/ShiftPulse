@@ -33,6 +33,7 @@ export const authConfig: NextAuthConfig = {
           name: user.name,
           role: user.role,
           timezone: user.timezone,
+          onboardingCompleted: user.onboardingCompleted,
         };
       },
     }),
@@ -42,9 +43,10 @@ export const authConfig: NextAuthConfig = {
       if (user) {
         token.id = user.id;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        token.role = (user as Record<string, any>).role;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        token.timezone = (user as Record<string, any>).timezone;
+        const u = user as Record<string, any>;
+        token.role = u.role;
+        token.timezone = u.timezone;
+        token.onboardingCompleted = u.onboardingCompleted;
       }
       return token;
     },
@@ -52,9 +54,10 @@ export const authConfig: NextAuthConfig = {
       if (session.user) {
         session.user.id = token.id as string;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (session.user as Record<string, any>).role = token.role;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (session.user as Record<string, any>).timezone = token.timezone;
+        const s = session.user as Record<string, any>;
+        s.role = token.role;
+        s.timezone = token.timezone;
+        s.onboardingCompleted = token.onboardingCompleted;
       }
       return session;
     },
@@ -63,7 +66,9 @@ export const authConfig: NextAuthConfig = {
       const isPublicRoute =
         request.nextUrl.pathname === "/" ||
         request.nextUrl.pathname.startsWith("/login") ||
-        request.nextUrl.pathname.startsWith("/signup");
+        request.nextUrl.pathname.startsWith("/signup") ||
+        request.nextUrl.pathname.startsWith("/pricing") ||
+        request.nextUrl.pathname.startsWith("/marketplace");
 
       if (isPublicRoute) return true;
       return isLoggedIn;

@@ -7,12 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MetricCard } from "@/components/shared/metric-card";
 import { Badge } from "@/components/ui/badge";
 import { ClockButton } from "@/components/worker/clock-button";
-import { Clock, Calendar, ArrowRight, Zap } from "lucide-react";
+import { Clock, Calendar, ArrowRight, Zap, AlertTriangle, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
 export default async function WorkerDashboard() {
   const user = await requireRole("WORKER");
   const { start, end } = getWeekRange();
+
+  const workerProfile = await db.workerProfile.findUnique({
+    where: { userId: user.id },
+    select: { isValidated: true, isMarketplaceVisible: true },
+  });
 
   const [clockStatus, weekEntries, todayShifts, companies] = await Promise.all([
     getClockStatus(user.id),
@@ -58,6 +63,26 @@ export default async function WorkerDashboard() {
       <TopBar title="Dashboard" subtitle={`Welcome back, ${user.name.split(" ")[0]}`} />
 
       <div className="p-4 lg:p-6 space-y-6">
+        {/* Validation status banner */}
+        {workerProfile && !workerProfile.isValidated && (
+          <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+            <AlertTriangle size={20} className="text-amber-600 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-amber-800">Your profile is pending validation</p>
+              <p className="text-xs text-amber-600 mt-0.5">Upload your required credentials to become visible on the marketplace.</p>
+            </div>
+            <Link href="/worker/credentials" className="ml-auto text-sm font-medium text-amber-700 hover:text-amber-900 whitespace-nowrap transition-colors">
+              Upload Credentials
+            </Link>
+          </div>
+        )}
+        {workerProfile && workerProfile.isValidated && (
+          <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-xl">
+            <CheckCircle2 size={20} className="text-green-600 flex-shrink-0" />
+            <p className="text-sm font-medium text-green-800">Your profile is live on the marketplace.</p>
+          </div>
+        )}
+
         {/* Clock In/Out hero section */}
         <Card className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white border-0 shadow-xl shadow-blue-600/15 overflow-hidden relative">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent_50%)]" />

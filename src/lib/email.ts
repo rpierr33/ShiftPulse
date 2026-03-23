@@ -20,7 +20,7 @@ export interface SendEmailResult {
 
 // ─── Configuration ──────────────────────────────────────────────
 
-const EMAIL_FROM = process.env.EMAIL_FROM ?? "ShiftPulse <noreply@shiftpulse.app>";
+const EMAIL_FROM = process.env.EMAIL_FROM ?? "CareCircle <noreply@carecircle.app>";
 const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER ?? "console"; // "resend" | "console"
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
@@ -121,14 +121,14 @@ function layout(body: string): string {
 <body style="margin:0; padding:0; background:#f3f4f6; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <div style="max-width:560px; margin:0 auto; padding:32px 16px;">
     <div style="background:#2563eb; padding:20px 24px; border-radius:12px 12px 0 0;">
-      <h1 style="color:#ffffff; font-size:18px; margin:0; letter-spacing:-0.025em;">ShiftPulse</h1>
+      <h1 style="color:#ffffff; font-size:18px; margin:0; letter-spacing:-0.025em;">CareCircle</h1>
     </div>
     <div style="background:#ffffff; border:1px solid #e5e7eb; border-top:none; padding:24px; border-radius:0 0 12px 12px;">
       ${body}
     </div>
     <p style="color:#9ca3af; font-size:12px; text-align:center; margin-top:16px;">
       You received this email because you have an account on
-      <a href="${APP_URL}" style="color:#9ca3af;">ShiftPulse</a>.
+      <a href="${APP_URL}" style="color:#9ca3af;">CareCircle</a>.
     </p>
   </div>
 </body>
@@ -155,11 +155,11 @@ function spacer(): string {
 
 export function welcomeEmail(name: string): EmailTemplate {
   return {
-    subject: "Welcome to ShiftPulse!",
+    subject: "Welcome to CareCircle!",
     html: layout(
       greeting(name) +
         paragraph(
-          "Thanks for joining ShiftPulse — the modern workforce management platform built for healthcare teams."
+          "Thanks for joining CareCircle — the modern workforce management platform built for healthcare teams."
         ) +
         paragraph(
           "You can now manage your profile, view available shifts, and track your time entries all in one place."
@@ -175,7 +175,7 @@ export function passwordResetEmail(
   resetUrl: string
 ): EmailTemplate {
   return {
-    subject: "Reset your ShiftPulse password",
+    subject: "Reset your CareCircle password",
     html: layout(
       greeting(name) +
         paragraph(
@@ -259,7 +259,7 @@ export function emailVerificationEmail(
   verificationUrl: string
 ): EmailTemplate {
   return {
-    subject: "Verify your ShiftPulse email",
+    subject: "Verify your CareCircle email",
     html: layout(
       greeting(name) +
         paragraph(
@@ -269,7 +269,7 @@ export function emailVerificationEmail(
         button("Verify Email", verificationUrl) +
         spacer() +
         paragraph(
-          "If you didn't create an account on ShiftPulse, you can safely ignore this email."
+          "If you didn't create an account on CareCircle, you can safely ignore this email."
         )
     ),
   };

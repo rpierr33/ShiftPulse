@@ -1,6 +1,6 @@
 {
-  "name": "ShiftPulse",
-  "short_name": "ShiftPulse",
+  "name": "CareCircle",
+  "short_name": "CareCircle",
   "description": "Workforce Timekeeping Platform",
   "start_url": "/",
   "display": "standalone",

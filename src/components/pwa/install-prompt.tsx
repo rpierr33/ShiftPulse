@@ -15,7 +15,7 @@ export function InstallPrompt() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem("shiftpulse-install-dismissed")) return;
+    if (localStorage.getItem("carecircle-install-dismissed")) return;
 
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     if (!isMobile) return;
@@ -42,7 +42,7 @@ export function InstallPrompt() {
 
   const handleDismiss = () => {
     setVisible(false);
-    localStorage.setItem("shiftpulse-install-dismissed", "true");
+    localStorage.setItem("carecircle-install-dismissed", "true");
   };
 
   if (!visible) return null;
@@ -55,7 +55,7 @@ export function InstallPrompt() {
             <Shield size={18} className="text-white" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-900">Install ShiftPulse</p>
+            <p className="text-sm font-semibold text-gray-900">Install CareCircle</p>
             <p className="text-xs text-gray-500">Quick access from your home screen</p>
           </div>
         </div>

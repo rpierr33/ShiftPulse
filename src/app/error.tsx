@@ -13,7 +13,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[ShiftPulse] Unhandled error:", error);
+    console.error("[CareCircle] Unhandled error:", error);
   }, [error]);
 
   return (
@@ -25,7 +25,7 @@ export default function GlobalError({
             <div className="p-2 bg-blue-600 rounded-xl">
               <Shield className="h-6 w-6 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">ShiftPulse</span>
+            <span className="text-xl font-bold text-gray-900">CareCircle</span>
           </div>
 
           {/* Error Icon */}

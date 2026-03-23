@@ -23,6 +23,8 @@ export function getRoleHome(role: UserRole): string {
       return "/worker/dashboard";
     case "COMPANY":
       return "/company/dashboard";
+    case "CLIENT":
+      return "/client/dashboard";
     case "ADMIN":
       return "/admin/dashboard";
     default:

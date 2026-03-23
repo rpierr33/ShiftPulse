@@ -34,7 +34,7 @@ export default async function VerifyEmailPage({
             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25 group-hover:shadow-blue-500/40 transition-shadow">
               <Shield className="text-white" size={24} />
             </div>
-            <span className="text-2xl font-bold text-white tracking-tight">ShiftPulse</span>
+            <span className="text-2xl font-bold text-white tracking-tight">CareCircle</span>
           </Link>
         </div>
 

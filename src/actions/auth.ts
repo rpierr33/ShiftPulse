@@ -14,7 +14,7 @@ const signUpSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  role: z.enum(["WORKER", "COMPANY"]),
+  role: z.enum(["WORKER", "COMPANY", "CLIENT"]),
   companyName: z.string().optional(),
 });
 
@@ -52,12 +52,18 @@ export async function signUpAction(formData: FormData) {
       name,
       email,
       passwordHash,
-      role: role as "WORKER" | "COMPANY",
+      role: role as "WORKER" | "COMPANY" | "CLIENT",
     },
   });
 
   if (role === "WORKER") {
     await db.workerProfile.create({
+      data: { userId: user.id },
+    });
+  }
+
+  if (role === "CLIENT") {
+    await db.clientProfile.create({
       data: { userId: user.id },
     });
   }

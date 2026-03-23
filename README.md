@@ -1,8 +1,8 @@
-# ShiftPulse
+# CareCircle
 
 **Workforce Timekeeping & Shift Management Platform for Healthcare Staffing**
 
-ShiftPulse is a full-stack, multi-tenant SaaS platform built for nurse registries, home health agencies, and healthcare staffing organizations. It handles clock-in/out tracking, shift scheduling, worker management, EVV compliance, payroll exports, and audit logging — all with role-based access for workers, companies, and platform admins.
+CareCircle is a full-stack, multi-tenant SaaS platform built for nurse registries, home health agencies, and healthcare staffing organizations. It handles clock-in/out tracking, shift scheduling, worker management, EVV compliance, payroll exports, and audit logging — all with role-based access for workers, companies, and platform admins.
 
 ---
 
@@ -126,7 +126,7 @@ All demo accounts use password: **`password123`**
 
 | Role | Email | Organization |
 |------|-------|-------------|
-| Admin | `admin@shiftpulse.com` | Platform administrator |
+| Admin | `admin@carecircle.com` | Platform administrator |
 | Company | `sarah@sunrisehealth.com` | Sunrise Home Health |
 | Company | `michael@humanityhealth.com` | Humanity & Blessing Home Health Corp |
 | Worker | `maria@example.com` | CNA, Home Health Aide |
@@ -298,7 +298,7 @@ AUTH_SECRET="generate-a-secure-random-string"
 AUTH_URL="http://localhost:3000"
 
 # App
-NEXT_PUBLIC_APP_NAME="ShiftPulse"
+NEXT_PUBLIC_APP_NAME="CareCircle"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 
 # Optional: Email provider

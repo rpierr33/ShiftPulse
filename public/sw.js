@@ -1,4 +1,4 @@
-const CACHE_KEY = "shiftpulse-v1";
+const CACHE_KEY = "carecircle-v1";
 
 const APP_SHELL = [
   "/",
@@ -179,7 +179,7 @@ async function replayQueuedActions() {
 
 function openSyncDB() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open("shiftpulse-sync", 1);
+    const req = indexedDB.open("carecircle-sync", 1);
     req.onupgradeneeded = () => {
       req.result.createObjectStore("sync-queue", { autoIncrement: true });
     };
